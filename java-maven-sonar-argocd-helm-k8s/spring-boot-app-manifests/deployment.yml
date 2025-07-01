@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: spring-boot-app
-        image: eashudivate/test:replaceImageTag
+        image: eashudivate/test:22
         ports:
         - containerPort: 8080
