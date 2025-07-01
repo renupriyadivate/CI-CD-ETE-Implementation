@@ -54,7 +54,9 @@ pipeline {
       }
     }
 
+    // 👇 FIXED this stage to run outside Docker with `agent any`
     stage('Update Deployment File') {
+      agent any
       environment {
         GIT_REPO_NAME = "CI-CD-ETE-Implementation"
         GIT_USER_NAME = "renupriyadivate"
