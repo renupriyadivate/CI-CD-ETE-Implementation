@@ -2,20 +2,25 @@ pipeline {
   agent {
     docker {
       image 'maven:3.9.6-eclipse-temurin-17'
-      args '--user root -v /var/run/docker.sock:/var/run/docker.sock' // mount Docker socket
+      args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
     }
   }
 
   stages {
+    stage('Install Git and Docker') {
+      steps {
+        sh 'apt-get update && apt-get install -y git docker.io'
+      }
+    }
+
     stage('Checkout') {
       steps {
-        sh 'echo passed'
+        sh 'echo code checkout passed'
       }
     }
 
     stage('Build and Test') {
       steps {
-        sh 'ls -ltr'
         sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
       }
     }
@@ -37,12 +42,10 @@ pipeline {
     stage('Build and Push Docker Image') {
       environment {
         DOCKER_IMAGE = "eashudivate/test:${BUILD_NUMBER}"
-        REGISTRY_CREDENTIALS = credentials('docker-cred')
       }
       steps {
         script {
           sh '''
-            apt-get update && apt-get install -y docker.io
             cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
             docker build -t ${DOCKER_IMAGE} .
           '''
@@ -54,23 +57,23 @@ pipeline {
       }
     }
 
-    // 👇 FIXED this stage to run outside Docker with `agent any`
+    // 💥 RUNNING THIS STAGE ALSO INSIDE DOCKER AGENT!
     stage('Update Deployment File') {
-      agent any
       environment {
         GIT_REPO_NAME = "CI-CD-ETE-Implementation"
         GIT_USER_NAME = "renupriyadivate"
       }
       steps {
-        checkout scm
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
           sh '''
-            git config user.email "eashudivate@gmail.com"
-            git config user.name "renupriyadivate"
-            sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-            git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-            git commit -m "Update deployment image to version ${BUILD_NUMBER}"
-            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+            git config --global user.email "eashudivate@gmail.com"
+            git config --global user.name "renupriyadivate"
+            cd java-maven-sonar-argocd-helm-k8s
+            git pull https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git
+            sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" spring-boot-app-manifests/deployment.yml
+            git add spring-boot-app-manifests/deployment.yml
+            git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit"
+            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:main
           '''
         }
       }
