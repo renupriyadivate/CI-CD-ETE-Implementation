@@ -57,7 +57,7 @@ pipeline {
       }
     }
 
-    // 💥 RUNNING THIS STAGE ALSO INSIDE DOCKER AGENT!
+    // 💥 Final fixed Update Deployment File stage
     stage('Update Deployment File') {
       environment {
         GIT_REPO_NAME = "CI-CD-ETE-Implementation"
@@ -68,6 +68,8 @@ pipeline {
           sh '''
             git config --global user.email "eashudivate@gmail.com"
             git config --global user.name "renupriyadivate"
+            git config --global --add safe.directory /var/lib/jenkins/workspace/ci-cd
+
             cd java-maven-sonar-argocd-helm-k8s
             git pull https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git
             sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" spring-boot-app-manifests/deployment.yml
